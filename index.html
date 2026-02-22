@@ -1,0 +1,751 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>CPU Scheduling Simulator — OS Lab</title>
+    <style>
+        :root {
+            --bg: #0f1724;
+            --card: #0b1220;
+            --muted: #94a3b8;
+            --accent: #16a34a;
+            --accent-2: #2563eb;
+            --glass: rgba(255, 255, 255, 0.03);
+        }
+
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            font-family: Inter, Segoe UI, Roboto, Arial;
+            background: linear-gradient(180deg, #071226 0%, #081832 100%);
+            color: #e6eef8;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 28px auto;
+            padding: 20px;
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            font-size: 20px
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            gap: 16px;
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: 10px;
+            padding: 14px;
+            box-shadow: 0 6px 18px rgba(2, 6, 23, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.03)
+        }
+
+        label {
+            display: block;
+            font-size: 12px;
+            color: var(--muted);
+            margin-bottom: 6px
+        }
+
+        input[type="number"],
+        input[type="text"],
+        select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            background: transparent;
+            color: #e8f0ff
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px
+        }
+
+        th,
+        td {
+            padding: 6px 8px;
+            text-align: left;
+            font-size: 13px
+        }
+
+        th {
+            color: var(--muted);
+            font-weight: 600;
+            font-size: 12px
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 8px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px
+        }
+
+        .btn-primary {
+            background: var(--accent-2);
+            color: white;
+            border: 0
+        }
+
+        .btn-green {
+            background: var(--accent);
+            color: #04210a;
+            border: 0
+        }
+
+        .btn-ghost {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            color: var(--muted)
+        }
+
+        .small {
+            font-size: 12px;
+            padding: 6px 8px;
+            border-radius: 6px
+        }
+
+        .procs-list {
+            max-height: 360px;
+            overflow: auto;
+            margin-bottom: 8px
+        }
+
+        .proc-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 8px
+        }
+
+        .proc-row input {
+            width: 80px
+        }
+
+        .proc-actions {
+            margin-left: auto;
+            display: flex;
+            gap: 6px
+        }
+
+        .gantt-wrap {
+            overflow: auto;
+            padding: 8px;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.015), rgba(255, 255, 255, 0.01));
+            border-radius: 8px
+        }
+
+        .timeline {
+            position: relative;
+            min-width: 800px;
+            padding: 10px 10px 20px 10px
+        }
+
+        .lane {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            height: 40px;
+            margin-bottom: 8px
+        }
+
+        .lane .label {
+            width: 60px;
+            text-align: right;
+            color: var(--muted);
+            font-size: 12px;
+            padding-right: 8px
+        }
+
+        .lane .bar-area {
+            position: relative;
+            flex: 1;
+            height: 30px;
+            border-radius: 6px;
+            background: transparent
+        }
+
+        .segment {
+            position: absolute;
+            height: 26px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #041122;
+            font-weight: 700;
+            box-shadow: 0 6px 16px rgba(2, 6, 23, 0.6)
+        }
+
+        .time-marker {
+            position: absolute;
+            top: 4px;
+            width: 2px;
+            background: rgba(255, 80, 80, 0.95);
+            z-index: 30
+        }
+
+        .ruler {
+            display: flex;
+            gap: 0;
+            color: var(--muted);
+            font-size: 12px;
+            margin-bottom: 6px
+        }
+
+        .ruler .tick {
+            width: 40px;
+            text-align: center;
+            border-left: 1px solid rgba(255, 255, 255, 0.03);
+            padding-left: 4px
+        }
+
+        .results {
+            margin-top: 10px;
+            font-size: 13px
+        }
+
+        .small-muted {
+            color: var(--muted);
+            font-size: 12px
+        }
+
+        .controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-top: 8px
+        }
+
+        .file {
+            display: none
+        }
+
+        .footer {
+            margin-top: 12px;
+            color: var(--muted);
+            font-size: 12px
+        }
+
+        /* responsive */
+        @media (max-width:980px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .timeline {
+                min-width: 600px
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>CPU Scheduling Simulator — OS Lab</h1>
+        <div class="grid">
+            <div class="card">
+                <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px">
+                    <label style="margin:0; font-weight:700">Processes</label>
+                    <button id="addProc" class="btn btn-primary small" style="margin-left:auto">+ Add</button>
+                </div>
+
+                <div class="procs-list" id="procList"></div>
+
+                <div style="display:flex; gap:8px; margin-top:6px; align-items:center">
+                    <select id="algoSelect">
+                        <option>FCFS</option>
+                        <option>SJF</option>
+                        <option>SRTF</option>
+                        <option>PRIORITY</option>
+                        <option>RR</option>
+                    </select>
+                    <input id="quantum" type="number" min="1" value="2" style="width:80px" />
+                    <label class="small-muted">Quantum (for RR)</label>
+                </div>
+
+                <div style="display:flex; gap:8px; align-items:center; margin-top:10px">
+                    <button id="genBtn" class="btn btn-green">Generate Schedule</button>
+                    <button id="clearBtn" class="btn btn-ghost">Clear</button>
+                </div>
+
+                <div style="display:flex; gap:8px; align-items:center; margin-top:12px">
+                    <label class="small-muted">Priority preemptive?</label>
+                    <input id="priorityPreemptive" type="checkbox" checked />
+                </div>
+
+                <hr style="border:none; height:1px; background:rgba(255,255,255,0.03); margin:12px 0">
+
+                <div style="display:flex; gap:8px; align-items:center">
+                    <input id="fileInput" class="file" type="file" accept=".csv" />
+                    <button id="importCSV" class="btn btn-ghost small">Import CSV</button>
+                    <button id="exportCSV" class="btn btn-ghost small">Export CSV</button>
+                    <button id="exportPNG" class="btn btn-ghost small">Export Gantt PNG</button>
+                </div>
+
+                <div class="footer">CSV format: pid,arrival,burst,priority (header optional). PIDs can be any integers
+                    (unique recommended).</div>
+            </div>
+
+            <div class="card">
+                <div style="display:flex; align-items:center; gap:12px; justify-content:space-between">
+                    <div>
+                        <label style="font-size:14px; font-weight:700">Gantt Chart</label>
+                        <div class="small-muted">Play, Pause, Step, Reset the time cursor</div>
+                    </div>
+
+                    <div style="display:flex; gap:8px; align-items:center">
+                        <button id="playBtn" class="btn btn-primary small">Start</button>
+                        <button id="pauseBtn" class="btn btn-ghost small">Pause</button>
+                        <button id="stepBtn" class="btn btn-ghost small">Step</button>
+                        <button id="resetBtn" class="btn btn-ghost small">Reset</button>
+                        <label class="small-muted">Speed</label>
+                        <select id="speed" style="width:80px">
+                            <option>0.5x</option>
+                            <option selected>1x</option>
+                            <option>2x</option>
+                            <option>4x</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="gantt-wrap" style="margin-top:12px">
+                    <div id="ganttArea" class="timeline">
+                        <div id="ruler" class="ruler"></div>
+                        <div id="lanes"></div>
+                    </div>
+                </div>
+
+                <div class="results" id="results"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ---------------------------
+           Utilities & data model
+           --------------------------- */
+        let processes = [
+            { pid: 1, arrival: 0, burst: 8, priority: 2 },
+            { pid: 2, arrival: 1, burst: 4, priority: 1 },
+            { pid: 3, arrival: 2, burst: 9, priority: 3 },
+            { pid: 4, arrival: 3, burst: 5, priority: 2 }
+        ];
+
+        let gantt = []; // array of segments {pid, start, end}
+        let timer = null;
+        let currentTime = 0;
+        let playing = false;
+        let cellWidth = 40; // px per time unit
+
+        /* ---------------------------
+           Basic DOM helpers
+           --------------------------- */
+        const procListEl = document.getElementById('procList');
+        const addProcBtn = document.getElementById('addProc');
+        const genBtn = document.getElementById('genBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const algoSelect = document.getElementById('algoSelect');
+        const quantumInput = document.getElementById('quantum');
+        const priorityPreemptive = document.getElementById('priorityPreemptive');
+        const lanesEl = document.getElementById('lanes');
+        const rulerEl = document.getElementById('ruler');
+        const resultsEl = document.getElementById('results');
+        const playBtn = document.getElementById('playBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const stepBtn = document.getElementById('stepBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const speedSelect = document.getElementById('speed');
+        const fileInput = document.getElementById('fileInput');
+        const importCSV = document.getElementById('importCSV');
+        const exportCSV = document.getElementById('exportCSV');
+        const exportPNG = document.getElementById('exportPNG');
+        const ganttArea = document.getElementById('ganttArea');
+
+        function uidBaseColor(pid) {
+            // deterministic pastel
+            const seed = Math.abs(pid * 9973) % 1000;
+            const r = 120 + (seed % 80); const g = 120 + ((seed * 7) % 80); const b = 120 + ((seed * 13) % 80);
+            return `rgb(${r},${g},${b})`;
+        }
+
+        /* ---------------------------
+           Process list UI
+           --------------------------- */
+        function renderProcList() {
+            procListEl.innerHTML = '';
+            processes.forEach((p, idx) => {
+                const row = document.createElement('div');
+                row.className = 'proc-row';
+                row.style.display = 'flex'; row.style.alignItems = 'center';
+                const pidInput = document.createElement('input'); pidInput.type = 'number'; pidInput.value = p.pid; pidInput.style.width = '64px';
+                const arrInput = document.createElement('input'); arrInput.type = 'number'; arrInput.value = p.arrival; arrInput.style.width = '64px';
+                const burstInput = document.createElement('input'); burstInput.type = 'number'; burstInput.value = p.burst; burstInput.style.width = '64px';
+                const prInput = document.createElement('input'); prInput.type = 'number'; prInput.value = p.priority; prInput.style.width = '64px';
+                [pidInput, arrInput, burstInput, prInput].forEach(el => el.style.padding = '6px');
+                pidInput.addEventListener('change', () => { p.pid = parseInt(pidInput.value || 0); renderProcList(); });
+                arrInput.addEventListener('change', () => { p.arrival = parseInt(arrInput.value || 0); });
+                burstInput.addEventListener('change', () => { p.burst = Math.max(0, parseInt(burstInput.value || 0)); });
+                prInput.addEventListener('change', () => { p.priority = parseInt(prInput.value || 0); });
+                row.appendChild(pidInput);
+                row.appendChild(arrInput);
+                row.appendChild(burstInput);
+                row.appendChild(prInput);
+                const actions = document.createElement('div'); actions.className = 'proc-actions';
+                const up = document.createElement('button'); up.textContent = '▲'; up.className = 'small btn-ghost'; up.addEventListener('click', () => {
+                    if (idx > 0) { [processes[idx - 1], processes[idx]] = [processes[idx], processes[idx - 1]]; renderProcList(); }
+                });
+                const down = document.createElement('button'); down.textContent = '▼'; down.className = 'small btn-ghost'; down.addEventListener('click', () => {
+                    if (idx < processes.length - 1) { [processes[idx + 1], processes[idx]] = [processes[idx], processes[idx + 1]]; renderProcList(); }
+                });
+                const del = document.createElement('button'); del.textContent = 'Remove'; del.className = 'small btn-ghost';
+                del.addEventListener('click', () => { processes.splice(idx, 1); renderProcList(); });
+                actions.appendChild(up); actions.appendChild(down); actions.appendChild(del);
+                row.appendChild(actions);
+                procListEl.appendChild(row);
+            });
+        }
+        addProcBtn.addEventListener('click', () => {
+            const maxPid = processes.reduce((m, p) => Math.max(m, p.pid), 0);
+            processes.push({ pid: maxPid + 1, arrival: 0, burst: 1, priority: 0 });
+            renderProcList();
+        });
+        clearBtn.addEventListener('click', () => { processes = []; gantt = []; renderProcList(); renderGantt(); resultsEl.innerHTML = ''; });
+
+        renderProcList();
+
+        /* ---------------------------
+           Scheduling Algorithms
+           All algorithms assume integer times.
+           --------------------------- */
+
+        function deepCopyProcs(src) {
+            return src.map(p => ({ pid: Number(p.pid), arrival: Number(p.arrival), burst: Number(p.burst), priority: Number(p.priority) }));
+        }
+
+        function scheduleFCFS(ps) {
+            const procs = deepCopyProcs(ps).sort((a, b) => a.arrival - b.arrival || a.pid - b.pid);
+            let t = 0; const out = [];
+            for (const p of procs) {
+                if (t < p.arrival) t = p.arrival;
+                out.push({ pid: p.pid, start: t, end: t + p.burst });
+                t += p.burst;
+            }
+            return out;
+        }
+
+        function scheduleSJFNonPreemptive(ps) {
+            let remaining = deepCopyProcs(ps).sort((a, b) => a.arrival - b.arrival || a.burst - b.burst || a.pid - b.pid);
+            let t = 0; const ready = []; const out = [];
+            while (remaining.length || ready.length) {
+                while (remaining.length && remaining[0].arrival <= t) { ready.push(remaining.shift()); ready.sort((a, b) => a.burst - b.burst || a.arrival - b.arrival || a.pid - b.pid); }
+                if (!ready.length) {
+                    if (remaining.length) t = Math.max(t, remaining[0].arrival);
+                    continue;
+                }
+                const p = ready.shift();
+                out.push({ pid: p.pid, start: t, end: t + p.burst });
+                t += p.burst;
+            }
+            return out;
+        }
+
+        function scheduleSRTF(ps) {
+            const procs = deepCopyProcs(ps).map(p => ({ ...p, remaining: p.burst })).sort((a, b) => a.arrival - b.arrival || a.pid - b.pid);
+            let t = 0; let i = 0; const ready = []; const out = []; let current = null;
+            while (i < procs.length || ready.length || current) {
+                while (i < procs.length && procs[i].arrival <= t) { ready.push({ ...procs[i] }); i++; }
+                if (current) { ready.push(current); current = null; }
+                if (ready.length) {
+                    ready.sort((a, b) => a.remaining - b.remaining || a.arrival - b.arrival || a.pid - b.pid);
+                    const p = ready.shift();
+                    const nextArrival = (i < procs.length) ? procs[i].arrival : null;
+                    const run = (nextArrival === null) ? p.remaining : Math.min(p.remaining, Math.max(1, nextArrival - t));
+                    out.push({ pid: p.pid, start: t, end: t + run });
+                    p.remaining -= run;
+                    t += run;
+                    if (p.remaining > 0) current = p;
+                } else {
+                    if (i < procs.length) t = procs[i].arrival; else break;
+                }
+            }
+            return out;
+        }
+
+        function schedulePriorityPreemptive(ps) {
+            const procs = deepCopyProcs(ps).map(p => ({ ...p, remaining: p.burst })).sort((a, b) => a.arrival - b.arrival || a.pid - b.pid);
+            let t = 0; let i = 0; const ready = []; const out = []; let current = null;
+            while (i < procs.length || ready.length || current) {
+                while (i < procs.length && procs[i].arrival <= t) { ready.push({ ...procs[i] }); i++; }
+                if (current) { ready.push(current); current = null; }
+                if (ready.length) {
+                    ready.sort((a, b) => a.priority - b.priority || a.remaining - b.remaining || a.arrival - b.arrival || a.pid - b.pid);
+                    const p = ready.shift();
+                    const nextArrival = (i < procs.length) ? procs[i].arrival : null;
+                    const run = (nextArrival === null) ? p.remaining : Math.min(p.remaining, Math.max(1, nextArrival - t));
+                    out.push({ pid: p.pid, start: t, end: t + run });
+                    p.remaining -= run;
+                    t += run;
+                    if (p.remaining > 0) current = p;
+                } else {
+                    if (i < procs.length) t = procs[i].arrival; else break;
+                }
+            }
+            return out;
+        }
+
+        function schedulePriorityNonPreemptive(ps) {
+            let remaining = deepCopyProcs(ps).sort((a, b) => a.arrival - b.arrival || a.priority - b.priority || a.pid - b.pid);
+            let t = 0; const ready = []; const out = [];
+            while (remaining.length || ready.length) {
+                while (remaining.length && remaining[0].arrival <= t) { ready.push(remaining.shift()); ready.sort((a, b) => a.priority - b.priority || a.arrival - b.arrival || a.pid - b.pid); }
+                if (!ready.length) { if (remaining.length) t = Math.max(t, remaining[0].arrival); continue; }
+                const p = ready.shift();
+                out.push({ pid: p.pid, start: t, end: t + p.burst });
+                t += p.burst;
+            }
+            return out;
+        }
+
+        function scheduleRR(ps, quantum) {
+            const procs = deepCopyProcs(ps).map(p => ({ ...p, remaining: p.burst })).sort((a, b) => a.arrival - b.arrival || a.pid - b.pid);
+            let t = 0; let i = 0; const queue = []; const out = [];
+            while (i < procs.length || queue.length) {
+                while (i < procs.length && procs[i].arrival <= t) { queue.push({ ...procs[i] }); i++; }
+                if (!queue.length) { if (i < procs.length) { t = Math.max(t, procs[i].arrival); continue; } else break; }
+                const p = queue.shift();
+                const run = Math.min(quantum, p.remaining);
+                out.push({ pid: p.pid, start: t, end: t + run });
+                p.remaining -= run;
+                t += run;
+                while (i < procs.length && procs[i].arrival <= t) { queue.push({ ...procs[i] }); i++; }
+                if (p.remaining > 0) queue.push(p);
+            }
+            return out;
+        }
+
+        /* Merge consecutive same-pid segments */
+        function mergeSegments(list) {
+            if (!list.length) return [];
+            const merged = [];
+            for (const seg of list) {
+                const last = merged[merged.length - 1];
+                if (last && last.pid === seg.pid && last.end === seg.start) last.end = seg.end;
+                else merged.push({ ...seg });
+            }
+            return merged;
+        }
+
+        /* ---------------------------
+           Generate schedule & metrics
+           --------------------------- */
+        function generateSchedule() {
+            const algo = algoSelect.value;
+            const q = Math.max(1, parseInt(quantumInput.value || 2));
+            const preemptive = priorityPreemptive.checked;
+            let out = [];
+            if (algo === 'FCFS') out = scheduleFCFS(processes);
+            else if (algo === 'SJF') out = scheduleSJFNonPreemptive(processes);
+            else if (algo === 'SRTF') out = scheduleSRTF(processes);
+            else if (algo === 'PRIORITY') out = preemptive ? schedulePriorityPreemptive(processes) : schedulePriorityNonPreemptive(processes);
+            else if (algo === 'RR') out = scheduleRR(processes, q);
+            out = mergeSegments(out);
+            gantt = out;
+            currentTime = 0;
+            renderGantt();
+            renderMetrics();
+        }
+
+        /* Compute waiting/turnaround/completion */
+        function computeMetrics() {
+            const map = {}; // completion times
+            for (const seg of gantt) map[seg.pid] = seg.end;
+            const rows = processes.map(p => {
+                const ct = (map[p.pid] !== undefined) ? map[p.pid] : p.arrival;
+                const tat = ct - p.arrival; const wt = tat - p.burst;
+                return { pid: p.pid, arrival: p.arrival, burst: p.burst, priority: p.priority, waiting: wt, turnaround: tat, completion: ct };
+            });
+            const avg_wt = rows.reduce((s, r) => s + r.waiting, 0) / (rows.length || 1);
+            const avg_tat = rows.reduce((s, r) => s + r.turnaround, 0) / (rows.length || 1);
+            return { rows, avg_wt, avg_tat };
+        }
+
+        /* ---------------------------
+           Render Gantt chart
+           --------------------------- */
+        function renderGantt() {
+            lanesEl.innerHTML = '';
+            rulerEl.innerHTML = '';
+            if (!gantt.length) { lanesEl.innerHTML = '<div class="small-muted">No schedule generated yet.</div>'; return; }
+            const endTime = Math.max(...gantt.map(s => s.end));
+            // ruler ticks
+            for (let t = 0; t <= endTime; t++) {
+                const tick = document.createElement('div'); tick.className = 'tick'; tick.textContent = t;
+                rulerEl.appendChild(tick);
+            }
+            // one lane per process in processes array order
+            for (const p of processes) {
+                const lane = document.createElement('div'); lane.className = 'lane';
+                const label = document.createElement('div'); label.className = 'label'; label.textContent = 'P' + p.pid;
+                const barArea = document.createElement('div'); barArea.className = 'bar-area';
+                // place segments
+                const segments = gantt.filter(s => s.pid === p.pid);
+                for (const seg of segments) {
+                    const segEl = document.createElement('div'); segEl.className = 'segment';
+                    const left = seg.start * cellWidth; const width = (seg.end - seg.start) * cellWidth;
+                    segEl.style.left = left + 'px'; segEl.style.width = Math.max(6, width) + 'px';
+                    segEl.style.background = uidBaseColor(p.pid);
+                    segEl.textContent = `P${p.pid} ${seg.start}-${seg.end}`;
+                    barArea.appendChild(segEl);
+                }
+                lane.appendChild(label); lane.appendChild(barArea);
+                lanesEl.appendChild(lane);
+            }
+            // position time marker
+            placeTimeMarker();
+        }
+
+        /* ---------------------------
+           Time cursor controls & animation
+           --------------------------- */
+        function placeTimeMarker() {
+            // remove existing marker
+            const existing = document.querySelectorAll('.time-marker'); existing.forEach(e => e.remove());
+            if (!gantt.length) return;
+            const endTime = Math.max(...gantt.map(s => s.end));
+            const x = currentTime * cellWidth;
+            const marker = document.createElement('div'); marker.className = 'time-marker'; marker.style.left = x + 'px';
+            marker.style.height = (40 * processes.length + 24) + 'px';
+            ganttArea.appendChild(marker);
+            if (currentTime > endTime) stopPlaying();
+        }
+
+        function play(speed = 1) {
+            stopPlaying();
+            playing = true;
+            const fpsInterval = 1000 / (speed * 1); // one time-unit per interval scaled by speed
+            timer = setInterval(() => { currentTime += 1; placeTimeMarker(); if (currentTime > Math.max(...gantt.map(s => s.end))) stopPlaying(); }, fpsInterval);
+        }
+        function stopPlaying() { playing = false; if (timer) clearInterval(timer); timer = null; }
+        function stepOnce() { currentTime += 1; placeTimeMarker(); }
+        function resetTime() { currentTime = 0; placeTimeMarker(); stopPlaying(); }
+
+        /* Buttons */
+        playBtn.addEventListener('click', () => {
+            if (!gantt.length) { alert('Generate schedule first'); return; }
+            const sp = speedSelect.value.includes('0.5') ? 0.5 : (speedSelect.value.includes('2x') ? 2 : (speedSelect.value.includes('4x') ? 4 : 1));
+            play(sp);
+        });
+        pauseBtn.addEventListener('click', () => stopPlaying());
+        stepBtn.addEventListener('click', () => { stopPlaying(); stepOnce(); });
+        resetBtn.addEventListener('click', () => { resetTime(); });
+
+        speedSelect.addEventListener('change', () => { if (playing) { const sp = speedSelect.value.includes('0.5') ? 0.5 : (speedSelect.value.includes('2x') ? 2 : (speedSelect.value.includes('4x') ? 4 : 1)); play(sp); } });
+
+        /* ---------------------------
+           Render metrics table
+           --------------------------- */
+        function renderMetrics() {
+            const m = computeMetrics();
+            let html = '<table><thead><tr><th>PID</th><th>Arrival</th><th>Burst</th><th>Pr</th><th>Waiting</th><th>Turnaround</th><th>Completion</th></tr></thead><tbody>';
+            for (const r of m.rows) {
+                html += `<tr><td>P${r.pid}</td><td>${r.arrival}</td><td>${r.burst}</td><td>${r.priority}</td><td>${r.waiting}</td><td>${r.turnaround}</td><td>${r.completion}</td></tr>`;
+            }
+            html += `</tbody></table><div style="margin-top:8px" class="small-muted">Average waiting: <strong>${m.avg_wt.toFixed(2)}</strong> &nbsp; | &nbsp; Average turnaround: <strong>${m.avg_tat.toFixed(2)}</strong></div>`;
+            resultsEl.innerHTML = html;
+        }
+
+        /* ---------------------------
+           Event wiring
+           --------------------------- */
+        genBtn.addEventListener('click', () => { generateSchedule(); });
+        importCSV.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (ev) => {
+            const file = ev.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const text = e.target.result.trim();
+                const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+                const rows = lines.map(l => l.split(',').map(x => x.trim()));
+                // handle optional header detection
+                if (rows.length && rows[0][0].toLowerCase().includes('pid')) rows.shift();
+                processes = rows.map(r => ({ pid: Number(r[0]), arrival: Number(r[1] || 0), burst: Number(r[2] || 0), priority: Number(r[3] || 0) }));
+                renderProcList();
+            };
+            reader.readAsText(file);
+        });
+        exportCSV.addEventListener('click', () => {
+            const header = 'pid,arrival,burst,priority\n';
+            const rows = processes.map(p => `${p.pid},${p.arrival},${p.burst},${p.priority}`).join('\n');
+            const blob = new Blob([header + rows], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'processes.csv'; a.click(); URL.revokeObjectURL(url);
+        });
+
+        /* Export Gantt PNG */
+        exportPNG.addEventListener('click', () => {
+            if (!gantt.length) { alert('Generate schedule first'); return; }
+            // Render lanes to a temporary canvas and download PNG
+            const endTime = Math.max(...gantt.map(s => s.end));
+            const width = Math.max(800, (endTime + 1) * cellWidth);
+            const height = 80 + processes.length * 40;
+            const canvas = document.createElement('canvas'); canvas.width = width * 2; canvas.height = height * 2; // hi-dpi
+            const ctx = canvas.getContext('2d'); ctx.scale(2, 2);
+            // background
+            ctx.fillStyle = '#071226'; ctx.fillRect(0, 0, width, height);
+            ctx.fillStyle = '#cfe8ff'; ctx.font = '12px Arial';
+            // ruler
+            for (let t = 0; t <= endTime; t++) {
+                const x = t * cellWidth;
+                ctx.fillStyle = '#94a3b8'; ctx.fillText(t, x + 6, 14);
+                ctx.strokeStyle = 'rgba(255,255,255,0.03)'; ctx.beginPath(); ctx.moveTo(x, 20); ctx.lineTo(x, height - 10); ctx.stroke();
+            }
+            // lanes & segments
+            for (let i = 0; i < processes.length; i++) {
+                const p = processes[i];
+                const y = 32 + i * 40;
+                ctx.fillStyle = '#94a3b8'; ctx.fillText('P' + p.pid, 6, y + 16);
+                // segments
+                const segs = gantt.filter(s => s.pid === p.pid);
+                for (const seg of segs) {
+                    const x = seg.start * cellWidth;
+                    const w = (seg.end - seg.start) * cellWidth;
+                    ctx.fillStyle = uidBaseColor(p.pid);
+                    ctx.fillRect(x + 70, y - 8, Math.max(4, w), 20);
+                    ctx.fillStyle = '#041122';
+                    ctx.fillText(`P${p.pid} ${seg.start}-${seg.end}`, x + 76, y + 6);
+                }
+            }
+            // marker
+            ctx.fillStyle = 'rgba(255,80,80,0.9)'; ctx.fillRect(currentTime * cellWidth + 70, 24, 2, height - 24);
+            // download
+            const url = canvas.toDataURL('image/png');
+            const a = document.createElement('a'); a.href = url; a.download = 'gantt.png'; a.click();
+        });
+
+        /* ---------------------------
+           Initial render
+           --------------------------- */
+        generateSchedule();
+        renderProcList();
+
+        /* When user edits processes manually, regenerate automatically? currently user must click Generate */
+    </script>
+
+</body>
+
+</html>
